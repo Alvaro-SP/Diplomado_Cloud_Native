@@ -17,12 +17,12 @@
       args:
         chdir: Diplomado_Cloud_Native/Front
 
-    - name: Detener contenedores
-      become: yes
-      become_user: ansible
-      command: echo '1234' | sudo -S docker stop $(docker ps -a -q) || true
-      args:
-        chdir: Diplomado_Cloud_Native
+    # - name: Detener contenedores
+    #   become: yes
+    #   become_user: ansible
+    #   command: echo '1234' | sudo -S docker stop $(docker ps -a -q) || true
+    #   args:
+    #     chdir: Diplomado_Cloud_Native
     
     - name: Correr contenedor
       become: yes
