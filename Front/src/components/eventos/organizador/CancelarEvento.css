@@ -1,0 +1,27 @@
+#motivo {
+  resize: none;
+  overflow-y: none;
+}
+
+.centerContentBtn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.gridElements {
+  display: grid;
+  align-items: center;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+#tarjetaCancelarEvento {
+  min-height: 500px !important;
+  background-color: #181a1b!important;
+}
+
+.fontPersonalizada {
+  font-family: "Signika", sans-serif;
+  cursor: default !important;
+}

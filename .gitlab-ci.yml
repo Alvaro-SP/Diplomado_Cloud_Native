@@ -1,0 +1,787 @@
+# image: docker:latest
+#! --------------------------------------variables--------------------------------------
+#*    # FRONTEND
+#    VITE_REACT_APP_CRYPTO_KEY_FRONTEND:     "Clave de cifrado para el frontend de la aplicación"
+#    CRYPTO_ALGORITHM:                       "Algoritmo de cifrado utilizado"
+#    CRYPTO_KEY:                             "Clave de cifrado utilizada"
+#    CRYPTO_IV:                              "Vector de inicialización utilizado"
+
+#*    # SERVICIOS
+#    VITE_REACT_APP_API_URL_DEV:              "URL del servicio API para entorno de desarrollo"
+#    VITE_REACT_APP_API_URL_TEST:             "URL del servicio API para entorno de pruebas"
+#    VITE_REACT_APP_API_URL_PROD:             "URL del servicio API para entorno de producción"
+
+#*    # BACKEND
+#    DB_HOST:                                "Dirección IP del host de la base de datos"
+#    DB_USER:                                "Usuario de la base de datos"
+#    DB_PASS:                                "Contraseña de la base de datos"
+#    DB_NAME:                                "Nombre de la base de datos"
+#    DB_PORT:                                "Puerto de la base de datos"
+#    CRYPTO_KEY_FRONTEND:                    "Clave de cifrado para el frontend de la aplicación (repetida)"
+#    CRYPTO_ALGORITHM:                       "Algoritmo de cifrado utilizado (repetido)"
+#    CRYPTO_KEY:                             "Clave de cifrado utilizada (repetida)"
+#    CRYPTO_IV:                              "Vector de inicialización utilizado (repetido)"
+#    JWT_SECRET:                             "Clave secreta para JWT (JSON Web Tokens)"
+#    MAIL_USER:                              "Credenciales de correo electrónico para enviar correos"
+#    MAIL_PASS:                              "Clave secreta (posiblemente utilizada para autenticación)"
+#    SECRET:                                 "Clave secreta"
+#    SERVER_PORT:                            "Puerto del servidor del backend (repetido)"
+
+#*    # BUCKET
+#    BUCKET_REGION:                          "Región del bucket de almacenamiento en la nube"
+#    BUCKET_ACCESS:                          "Clave de acceso para el bucket de almacenamiento en la nube"
+#    BUCKET_SECRET:                          "Clave secreta para el bucket de almacenamiento en la nube"
+#    BUCKET_LINK:                            "Enlace al bucket de almacenamiento en la nube"
+
+#* services:
+#   - docker:dind
+#   - docker/compose:latest
+
+# El flujo de trabajo DevOps comienza con la integración continúa. Este proceso inicia automáticamente
+# cuando se completa cualquier nueva funcionalidad en las ramas “Feature” en la que se está trabajando
+# y se desea unir el nuevo código con la rama Develop.
+stages:
+  - cleanup
+  - build
+  - test
+  - delivery
+  - release
+  - deploy
+###! ------------------------ LIMPIEZA DE VM (optimization) -----------------------------
+cleanup_job:
+  stage: cleanup
+  tags:
+    - ayd2
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^hotfix/ || $CI_COMMIT_REF_NAME =~ /^bugfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "develop" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/
+      when: always
+    - if: $CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME =~ /^release/
+      when: never
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+  script:
+    - docker image prune -f
+  allow_failure: true
+    # Esta regla evitará que se ejecute el pipeline cuando se crea un tag
+  # except:
+  #   - $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+
+#!_________▁ ▂ ▄ ▅ ▆ ▇ █ █ █ █ █ █ █    🅱🆄🅸🅻🅳     █ █ █ █ █ █ █ ▇ ▆ ▅ ▄ ▂ ▁_________
+###! --------------------- CONSTRUCCION DE IMAGENES -------------------------
+#* se procede a construir las imágenes de los contenedores,
+#* realizar su levantamiento y ejecutar pruebas sobre ellos.
+
+# Descripción general:
+# Estos trabajos de construcción y prueba automatizan el proceso de construcción y pruebas de diferentes componentes de la aplicación.
+# Los trabajos se ejecutan manualmente o automáticamente según las reglas definidas.
+
+# ******** AuthenticationServices ********
+build_usuario:
+  stage: build
+  tags:
+    - ayd2
+  environment:
+    name: usuariosapi
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^hotfix/ || $CI_COMMIT_REF_NAME =~ /^bugfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^release/
+      when: always
+    - if: $CI_COMMIT_REF_NAME =~ /^feature/ #Se ejecuta correctamente en ramas feature
+      when: always
+    - if: $CI_COMMIT_REF_NAME == "main"
+      when: never
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - changes:
+      - Backend/AuthenticationServices/**/*
+      when: always # start when changes are made in the Front folder
+  script:
+    - docker stop sa_usuario_container || true
+    - docker rm sa_usuario_container || true
+    - docker build -t alvarosp24/sa_usuario ./Backend/AuthenticationServices/regandlog
+    - docker save alvarosp24/sa_usuario > sa_usuario.zip;
+    - docker run -d -p 3001:3001 --name sa_usuario_container
+      -e DB_HOST=$DB_HOST
+      -e DB_USER=$DB_USER
+      -e DB_PASS=$DB_PASS
+      -e DB_NAME=$DB_NAME
+      -e DB_PORT=$DB_PORT
+      -e CRYPTO_KEY_FRONTEND=$CRYPTO_KEY_FRONTEND
+      -e CRYPTO_ALGORITHM=$CRYPTO_ALGORITHM
+      -e CRYPTO_KEY=$CRYPTO_KEY
+      -e CRYPTO_IV=$CRYPTO_IV
+      -e JWT_SECRET=$JWT_SECRET
+      -e MAIL_USER=$MAIL_USER
+      -e MAIL_PASS=$MAIL_PASS
+      -e SECRET=$SECRET
+      alvarosp24/sa_usuario
+  artifacts:
+    paths:
+      - sa_usuario.zip
+  allow_failure: false
+    # Esta regla evitará que se ejecute el pipeline cuando se crea un tag
+  # except:
+  #   - $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+# ******** COMPRAS ********
+build_compras:
+  stage: build
+  tags:
+    - ayd2
+  environment:
+    name: comprasapi
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^hotfix/ || $CI_COMMIT_REF_NAME =~ /^bugfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^release/
+      when: always
+    - if: $CI_COMMIT_REF_NAME =~ /^feature/ #Se ejecuta correctamente en ramas feature
+      when: always
+    - if: $CI_COMMIT_REF_NAME == "main"
+      when: never
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - changes:
+      - Backend/Compras/**/*
+      when: always # start when changes are made in the Front folder
+  script:
+    - docker stop sa_compras_container || true
+    - docker rm sa_compras_container || true
+    - docker build -t alvarosp24/sa_compras ./Backend/Compras;
+    - docker save alvarosp24/sa_compras > sa_compras.zip;
+    # validando alguna variable vacia
+    - if [ -z "$DB_HOST" ]; then echo "DB_HOST is unset"; else echo "DB_HOST is set to '$DB_HOST'"; fi
+    - if [ -z "$DB_USER" ]; then echo "DB_USER is unset"; else echo "DB_USER is set to '$DB_USER'"; fi
+    - if [ -z "$DB_PASS" ]; then echo "DB_PASS is unset"; else echo "DB_PASS is set to '$DB_PASS'"; fi
+    - if [ -z "$DB_NAME" ]; then echo "DB_NAME is unset"; else echo "DB_NAME is set to '$DB_NAME'"; fi
+    - if [ -z "$DB_PORT" ]; then echo "DB_PORT is unset"; else echo "DB_PORT is set to '$DB_PORT'"; fi
+    - if [ -z "$CRYPTO_ALGORITHM" ]; then echo "CRYPTO_ALGORITHM is unset"; else echo "CRYPTO_ALGORITHM is set to '$CRYPTO_ALGORITHM'"; fi
+    - if [ -z "$CRYPTO_KEY" ]; then echo "CRYPTO_KEY is unset"; else echo "CRYPTO_KEY is set to '$CRYPTO_KEY'"; fi
+    - if [ -z "$CRYPTO_IV" ]; then echo "CRYPTO_IV is unset"; else echo "CRYPTO_IV is set to '$CRYPTO_IV'"; fi
+    - if [ -z "$JWT_SECRET" ]; then echo "JWT_SECRET is unset"; else echo "JWT_SECRET is set to '$JWT_SECRET'"; fi
+    - if [ -z "$MAIL_USER" ]; then echo "MAIL_USER is unset"; else echo "MAIL_USER is set to '$MAIL_USER'"; fi
+    - if [ -z "$MAIL_PASS" ]; then echo "MAIL_PASS is unset"; else echo "MAIL_PASS is set to '$MAIL_PASS'"; fi
+    - if [ -z "$SECRET" ]; then echo "SECRET is unset"; else echo "SECRET is set to '$SECRET'"; fi
+    - docker run -d -p 3003:3003 --name sa_compras_container
+      -e DB_HOST=$DB_HOST
+      -e DB_USER=$DB_USER
+      -e DB_PASS=$DB_PASS
+      -e DB_NAME=$DB_NAME
+      -e DB_PORT=$DB_PORT
+      -e CRYPTO_ALGORITHM=$CRYPTO_ALGORITHM
+      -e CRYPTO_KEY=$CRYPTO_KEY
+      -e CRYPTO_IV=$CRYPTO_IV
+      -e JWT_SECRET=$JWT_SECRET
+      -e MAIL_USER=$MAIL_USER
+      -e MAIL_PASS=$MAIL_PASS
+      -e SECRET=$SECRET
+      alvarosp24/sa_compras
+  artifacts:
+    paths:
+      - sa_compras.zip
+  allow_failure: false
+    # Esta regla evitará que se ejecute el pipeline cuando se crea un tag
+  # except:
+  #   - $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+# ******** EVENTOS ********
+build_eventos:
+  stage: build
+  tags:
+    - ayd2
+  environment:
+    name: eventosapi
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^hotfix/ || $CI_COMMIT_REF_NAME =~ /^bugfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^release/
+      when: always
+    - if: $CI_COMMIT_REF_NAME =~ /^feature/ #Se ejecuta correctamente en ramas feature
+      when: always
+    - if: $CI_COMMIT_REF_NAME == "main"
+      when: never
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - changes:
+      - Backend/Eventos/**/*
+      when: always # start when changes are made in the Front folder
+  script:
+    - docker stop sa_eventos_container || true
+    - docker rm sa_eventos_container || true
+    - docker build -t alvarosp24/sa_eventos ./Backend/Eventos;
+    - docker save alvarosp24/sa_eventos > sa_eventos.zip;
+    - docker run -d -p 3002:3002 --name sa_eventos_container
+      -e DB_HOST=$DB_HOST
+      -e DB_USER=$DB_USER
+      -e DB_PASS=$DB_PASS
+      -e DB_NAME=$DB_NAME
+      -e DB_PORT=$DB_PORT
+      -e CRYPTO_ALGORITHM=$CRYPTO_ALGORITHM
+      -e CRYPTO_KEY_FRONTEND=$CRYPTO_KEY_FRONTEND
+      -e CRYPTO_KEY=$CRYPTO_KEY
+      -e CRYPTO_IV=$CRYPTO_IV
+      -e JWT_SECRET=$JWT_SECRET
+      -e MAIL_USER=$MAIL_USER
+      -e MAIL_PASS=$MAIL_PASS
+      -e BUCKET_ACCESS=$BUCKET_ACCESS
+      -e BUCKET_REGION=$BUCKET_REGION
+      -e BUCKET_SECRET=$BUCKET_SECRET
+      -e BUCKET_LINK=$BUCKET_LINK
+      -e SECRET=$SECRET
+      alvarosp24/sa_eventos
+  artifacts:
+    paths:
+      - sa_eventos.zip
+  allow_failure: false
+    # Esta regla evitará que se ejecute el pipeline cuando se crea un tag
+  # except:
+  #   - $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+# ******** LOOSELY ********
+build_loosely:
+  stage: build
+  tags:
+    - ayd2
+  environment:
+    name: development
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^hotfix/ || $CI_COMMIT_REF_NAME =~ /^bugfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^release/
+      when: always
+    - if: $CI_COMMIT_REF_NAME =~ /^feature/ #Se ejecuta correctamente en ramas feature
+      when: always
+    - if: $CI_COMMIT_REF_NAME == "main"
+      when: never
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - changes:
+      - Backend/Loosely/**/*
+      when: always # start when changes are made in the Front folder
+  script:
+    - docker stop sa_loosely_container || true
+    - docker rm sa_loosely_container || true
+    - docker build -t alvarosp24/sa_loosely ./Backend/Loosely
+    - docker save alvarosp24/sa_loosely > sa_loosely.zip;
+    - docker run -d -p 3010:3010  --name sa_loosely_container
+      -e DB_HOST=$DB_HOST
+      -e DB_USER=$DB_USER
+      -e DB_PASS=$DB_PASS
+      -e DB_NAME=$DB_NAME
+      -e DB_PORT=$DB_PORT
+      -e MICROSERVICE_USUARIOS=$MICROSERVICE_USUARIOS
+      -e MICROSERVICE_EVENTOS=$MICROSERVICE_EVENTOS
+      -e MICROSERVICE_COMPRA=$MICROSERVICE_COMPRA
+      -e QUEUE_URL_RESPONSES=$QUEUE_URL_RESPONSES
+      -e QUEUE_URL_PETICIONES=$QUEUE_URL_PETICIONES
+      -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+      -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+      -e AWS_REGION=$AWS_REGION
+      alvarosp24/sa_loosely
+  artifacts:
+    paths:
+      - sa_loosely.zip
+  allow_failure: false
+    # Esta regla evitará que se ejecute el pipeline cuando se crea un tag
+  # except:
+  #   - $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+# ******** FRONTEND ********
+build_frontend:
+  stage: build
+  tags:
+    - ayd2
+  environment:
+    name: development
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^hotfix/ || $CI_COMMIT_REF_NAME =~ /^bugfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^release/
+      when: always
+    - if: $CI_COMMIT_REF_NAME =~ /^feature/ #Se ejecuta correctamente en ramas feature
+      when: always
+    - if: $CI_COMMIT_REF_NAME == "main"
+      when: never
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - changes:
+      - Front/**/*
+      when: always # start when changes are made in the Front folder
+  script:
+    - docker stop sa_frontend_container || true
+    - docker rm sa_frontend_container || true
+    - docker build -t alvarosp24/sa_frontend ./Front;
+    - docker save alvarosp24/sa_frontend > sa_frontend.zip;
+    - docker run -d -p 3000:5173 --name sa_frontend_container
+      -e VITE_REACT_APP_API_URL=$VITE_REACT_APP_API_URL
+      -e VITE_REACT_APP_CRYPTO_KEY_FRONTEND=$VITE_REACT_APP_CRYPTO_KEY_FRONTEND
+      -e CRYPTO_ALGORITHM=$CRYPTO_ALGORITHM
+      -e CRYPTO_KEY=$CRYPTO_KEY
+      -e CRYPTO_IV=$CRYPTO_IV
+      alvarosp24/sa_frontend
+
+  artifacts:
+    paths:
+      - sa_frontend.zip
+  allow_failure: false
+    # Esta regla evitará que se ejecute el pipeline cuando se crea un tag
+  # except:
+  #   - $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+
+
+
+#!_________▁ ▂ ▄ ▅ ▆ ▇ █ █ █ █ █ █ █    🆃🅴🆂🆃     █ █ █ █ █ █ █ ▇ ▆ ▅ ▄ ▂ ▁_________
+###! ------------------------ TEST UNITARIOS -----------------------------
+#* comienza la fase de pruebas
+# Descripción general:
+# Estos trabajos de prueba ejecutan pruebas automatizadas en diferentes componentes de la aplicación.
+# Los trabajos se ejecutan manualmente o automáticamente según las reglas definidas.
+
+test_compras:
+  stage: test
+  tags:
+    - testproyecto
+  environment:
+    name: comprasapi
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME  =~ /^hotfix/ # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/
+      when: always
+    - if: $CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME =~ /^release/
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - changes:
+      - Backend/Compras/**/*
+      when: always # start when changes are made in the Front folder
+  script:
+    - cd Backend
+    - cd Compras
+    - npm i
+    - npm test
+  needs:
+    - build_compras
+  allow_failure: false
+
+test_eventos:
+  stage: test
+  tags:
+    - testproyecto
+  environment:
+    name: eventosapi
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME  =~ /^hotfix/ # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/
+      when: always
+    - if: $CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME =~ /^release/
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - changes:
+      - Backend/Eventos/**/*
+      when: always # start when changes are made in the Front folder
+  script:
+    - cd Backend
+    - cd Eventos
+    - npm i
+    - npm test
+  needs:
+    - build_eventos
+  allow_failure: false
+
+test_authentication:
+  stage: test
+  tags:
+    - testproyecto
+  environment:
+    name: usuariosapi
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME  =~ /^hotfix/ # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/
+      when: always
+    - if: $CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME =~ /^release/
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - changes:
+      - Backend/AuthenticationServices/**/*
+      when: always # start when changes are made in the Front folder
+  script:
+    - cd Backend
+    - cd AuthenticationServices
+    - cd regandlog
+    - npm i
+    - npm test
+  needs:
+    - build_usuario
+  allow_failure: false
+
+###! ------------------------ TEST DE INTEGRACION -----------------------------
+#? Si las pruebas no resultan satisfactorias el flujo se interrumpirá y
+#? no se seguirá con las demás fases del flujo o pipeline.
+
+test_integracion:
+  stage: test
+  tags:
+    - testproyecto
+  environment:
+    name: testing
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME  =~ /^hotfix/ # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/
+      when: always
+    - if: $CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME =~ /^release/
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - changes:
+      - Front/**/*
+      when: always # start when changes are made in the Front folder
+  script:
+    - cd Integration_Test
+    - npm i
+    - npm test
+  needs:
+    - build_frontend
+  allow_failure: false
+
+
+#!_________▁ ▂ ▄ ▅ ▆ ▇ █ █ █ █ █ █    🅳🅴🅻🅸🆅🅴🆁🆈    █ █ █ █ █ █ ▇ ▆ ▅ ▄ ▂ ▁_________
+###! ------------- CREACION DE RELEASE ------------------
+job_tagged:
+  stage: release
+  tags:
+    - ayd2
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME =~ /^hotfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "develop" # only run this job when the pipeline is triggered by a merge request
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/ || $CI_COMMIT_REF_NAME == "main"  || $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - if: $CI_COMMIT_REF_NAME =~ /^release/
+      when: always
+  script:
+    # primero clonamos el repositorio con ssh
+    - |
+      if [ -z "$CI_COMMIT_TAG" ]; then
+        if [ ! -d "g1_sa_proyecto" ]; then
+          git clone git@gitlab.com:Alvaro-SP/g1_sa_proyecto.git;
+        fi
+        cd g1_sa_proyecto
+        git pull
+        echo "------------------CREANDO EL RELEASE------------------"
+        git fetch --tags # fetch all tags from remote
+        export LATEST_TAG=$(git describe --tags --abbrev=0)
+        echo "Latest tag is $LATEST_TAG"
+        export NEXT_VERSION=$(echo $LATEST_TAG | awk -Fv '{print "v" $2 + 1 "." 0 "." 0}')
+        echo "Next version is $NEXT_VERSION"
+        git tag $NEXT_VERSION || true
+        git push origin $NEXT_VERSION || true
+        echo $CI_COMMIT_TAG
+        release-cli create --name "cambiamos a la version $NEXT_VERSION" --description "release automatico" --tag-name $NEXT_VERSION
+      else
+        release-cli create --name "cambiamos a la version $CI_COMMIT_TAG" --description "Un Humilde release xd" --tag-name $CI_COMMIT_TAG
+      fi
+  # release:
+  #   name: 'cambiamos a la version $CI_COMMIT_TAG'
+  #   description: 'Un Humilde release xd'
+  #   tag_name: '$CI_COMMIT_TAG'
+  allow_failure: false
+
+# job_release:
+#   stage: release
+#   tags:
+#     - ayd2
+#   rules:
+#     - if: $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+#       when: never                                  # Do not run this job in a tag pipeline
+#     - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ # only run this job when the branch name starts with "feature"
+#       when: manual # and start when that start in Gitlab manually
+#     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "develop" # only run this job when the pipeline is triggered by a merge request
+#       when: manual # start automatically when a merge request is created
+#     - if: $CI_COMMIT_REF_NAME =~ /^release/
+#       when: always
+#   script:
+#     - echo "Create release"
+#   release:
+#     name: 'cambiamos a la version $CI_COMMIT_TAG'
+#     description: 'Un Humilde release xd'
+#     tag_name: '$CI_COMMIT_TAG'
+#   needs:
+#     - job_tagged
+
+###! ------------- SUBIDA DE IMAGENES A DOCKERHUB ------------------
+# se procederán a subir las
+# imágenes de Docker construidas previamente a un repositorio de contenedores (DockerHub).
+# Descripción general:
+# Estos trabajos de construcción, pruebas y entrega automatizan el proceso de desarrollo de diferentes componentes de la aplicación.
+# Los trabajos se ejecutan manualmente o automáticamente según las reglas definidas.
+
+ # ******** AuthenticationServices ********
+delivery_usuario:
+  stage: delivery
+  tags:
+    - ayd2
+  environment:
+    name: development
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME =~ /^hotfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "develop" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/ || $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_COMMIT_REF_NAME =~ /^release/ #|| $CI_COMMIT_REF_NAME == "main"
+      when: always
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    # - changes:
+    #   - Backend/AuthenticationServices/**/*
+    #   when: always
+  before_script:
+    - echo "$PASSDOCKER" | docker login -u "$USERDOCKER" --password-stdin
+  script:
+    - docker save alvarosp24/sa_usuario > sa_usuario.zip || true
+    - docker load < sa_usuario.zip || true
+    - docker push alvarosp24/sa_usuario:latest || true
+    - docker rmi -f alvarosp24/sa_usuario:latest || true
+  allow_failure: false
+# ******** COMPRAS ********
+delivery_compras:
+  stage: delivery
+  tags:
+    - ayd2
+  environment:
+    name: development
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME =~ /^hotfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "develop" # only run this job when the pipeline is triggered by a merge request
+      when: manual # start automatically when a merge request is created
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/ || $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_COMMIT_REF_NAME =~ /^release/ #|| $CI_COMMIT_REF_NAME == "main"
+      when: always
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+  before_script:
+    - echo "$PASSDOCKER" | docker login -u "$USERDOCKER" --password-stdin
+  script:
+    - docker save alvarosp24/sa_compras > sa_compras.zip || true
+    - docker load < sa_compras.zip || true
+    - docker push alvarosp24/sa_compras:latest || true
+    - docker rmi -f alvarosp24/sa_compras:latest || true
+  allow_failure: false
+# ******** EVENTOS ********
+delivery_eventos:
+  stage: delivery
+  tags:
+    - ayd2
+  environment:
+    name: development
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME =~ /^hotfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "develop" # only run this job when the pipeline is triggered by a merge request
+      when: manual # start automatically when a merge request is created
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/ || $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_COMMIT_REF_NAME =~ /^release/ #|| $CI_COMMIT_REF_NAME == "main"
+      when: always
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+  before_script:
+    - echo "$PASSDOCKER" | docker login -u "$USERDOCKER" --password-stdin
+  script:
+    - docker save alvarosp24/sa_eventos > sa_eventos.zip || true
+    - docker load < sa_eventos.zip || true
+    - docker push alvarosp24/sa_eventos:latest || true
+    - docker rmi -f alvarosp24/sa_eventos:latest || true
+  allow_failure: false
+# ******** LOOSELY ********
+delivery_loosely:
+  stage: delivery
+  tags:
+    - ayd2
+  environment:
+    name: development
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME =~ /^hotfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "develop" # only run this job when the pipeline is triggered by a merge request
+      when: manual # start automatically when a merge request is created
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/ || $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_COMMIT_REF_NAME =~ /^release/ #|| $CI_COMMIT_REF_NAME == "main"
+      when: always
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+  before_script:
+    - echo "$PASSDOCKER" | docker login -u "$USERDOCKER" --password-stdin
+  script:
+    - docker save alvarosp24/sa_loosely > sa_loosely.zip || true
+    - docker load < sa_loosely.zip || true
+    - docker push alvarosp24/sa_loosely:latest || true
+    - docker rmi -f alvarosp24/sa_loosely:latest || true
+  allow_failure: false
+# ******** FRONTEND ********
+delivery_frontend:
+  stage: delivery
+  tags:
+    - ayd2
+  environment:
+    name: development
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME =~ /^hotfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "develop" # only run this job when the pipeline is triggered by a merge request
+      when: manual # start automatically when a merge request is created
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop" || $CI_COMMIT_REF_NAME =~ /^feature/ || $CI_COMMIT_TAG || $CI_COMMIT_REF_NAME =~ /^v\d+\.\d+\.\d+$/ # Excluye los tags que sigan el formato vX.X.X
+      when: never
+    - if: $CI_COMMIT_REF_NAME =~ /^release/ #|| $CI_COMMIT_REF_NAME == "main"
+      when: always
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+  before_script:
+    - echo "$PASSDOCKER" | docker login -u "$USERDOCKER" --password-stdin
+  script:
+    - docker save alvarosp24/sa_frontend > sa_frontend.zip || true
+    - docker load < sa_frontend.zip || true
+    - docker push alvarosp24/sa_frontend:latest || true
+    - docker rmi -f alvarosp24/sa_frontend:latest || true
+  allow_failure: false
+
+#!_________▁ ▂ ▄ ▅ ▆ ▇ █ █ █ █ █ █ █    🅳🅴🅿🅻🅾🆈     █ █ █ █ █ █ █ ▇ ▆ ▅ ▄ ▂ ▁_________
+# Descripción general:
+# Este trabajo automatiza el proceso de despliegue en un entorno de producción.
+# Se ejecuta manualmente o automáticamente según las reglas definidas.
+
+deploy_production:
+  stage: deploy
+  tags:
+    - saproductionkubernete
+  environment:
+    name: production
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ || $CI_COMMIT_REF_NAME =~ /^hotfix/ # only run this job when the branch name starts with "feature"
+      when: never # and start when that start in Gitlab manually
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "develop" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_COMMIT_REF_NAME == "develop"
+      when: never
+    - if: $CI_COMMIT_REF_NAME =~ /^release/ || $CI_COMMIT_TAG
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_REF_NAME == "main" # only run this job when the pipeline is triggered by a merge request
+      when: never # start automatically when a merge request is created
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_NAME == "main"
+      when: always
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+  before_script:
+    - kubectl config get-contexts
+    - kubectl config use-context gke_abiding-team-402204_us-central1-a_k8s-demo
+    - kubectl get pods -n proyecto
+  script:
+    - kubectl delete -f kubernetes/secrets/secrets.yaml || true
+    - kubectl apply -f kubernetes/secrets/secrets.yaml
+    - kubectl delete -f kubernetes/deployments/frontend.yml || true
+    - kubectl apply -f kubernetes/deployments/frontend.yml
+    - kubectl delete -f kubernetes/deployments/usuario.yml || true
+    - kubectl apply -f kubernetes/deployments/usuario.yml
+    - kubectl delete -f kubernetes/deployments/eventos.yml || true
+    - kubectl apply -f kubernetes/deployments/eventos.yml
+    - kubectl delete -f kubernetes/deployments/compras.yml || true
+    - kubectl apply -f kubernetes/deployments/compras.yml
+    - kubectl delete -f kubernetes/deployments/loosely.yml || true
+    - kubectl apply -f kubernetes/deployments/loosely.yml
+    - kubectl get pods -n proyecto
+    # - echo "------------------EJECUCION DEL PLAYBOOK DE ANSIBLE------------------"
+    # - echo "Pokemon*150" | su ansible
+    # - pwd
+    # - cd Ansible
+    # - echo "Pokemon*150" | sudo -u ansible ansible-playbook playBook.yaml
+      # -e "VITE_REACT_APP_API_URL=${VITE_REACT_APP_API_URL} DB_HOST=${DB_HOST} DB_USER=${DB_USER} DB_PASS=${DB_PASS} DB_NAME=${DB_NAME} DB_PORT=${DB_PORT} CRYPTO_KEY_FRONTEND=${CRYPTO_KEY_FRONTEND} CRYPTO_ALGORITHM=${CRYPTO_ALGORITHM} CRYPTO_KEY=${CRYPTO_KEY} CRYPTO_IV=${CRYPTO_IV} JWT_SECRET=${JWT_SECRET} MAIL_USER=${MAIL_USER} MAIL_PASS=${MAIL_PASS} SECRET=${SECRET} BUCKET_ACCESS=${BUCKET_ACCESS} BUCKET_REGION=${BUCKET_REGION} BUCKET_SECRET=${BUCKET_SECRET} BUCKET_LINK=${BUCKET_LINK} MICROSERVICE_USUARIOS2=${MICROSERVICE_USUARIOS2} MICROSERVICE_EVENTOS2=${MICROSERVICE_EVENTOS2} MICROSERVICE_COMPRA2=${MICROSERVICE_COMPRA2} MICROSERVICE_USUARIOS1=${MICROSERVICE_USUARIOS1} MICROSERVICE_EVENTOS1=${MICROSERVICE_EVENTOS1} MICROSERVICE_COMPRA1=${MICROSERVICE_COMPRA1} QUEUE_URL_RESPONSES=${QUEUE_URL_RESPONSES} QUEUE_URL_PETICIONES=${QUEUE_URL_PETICIONES} AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} AWS_REGION=${AWS_REGION} VITE_REACT_APP_CRYPTO_KEY_FRONTEND=${VITE_REACT_APP_CRYPTO_KEY_FRONTEND}"
+
+  allow_failure: false
+
+# deploy_production2:
+#   stage: deploy
+#   tags:
+#     - saproduction2
+#   environment:
+#     name: production
+#   rules:
+#     - if: $CI_COMMIT_REF_NAME =~ /^bugfix/ # only run this job when the branch name starts with "feature"
+#       when: manual # and start when that start in Gitlab manually
+#     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_COMMIT_BRANCH == "main" # only run this job when the pipeline is triggered by a merge request
+#       when: always # start automatically when a merge request is created
+#     - changes:
+#       - Backend/AuthenticationServices/**/*
+#       when: always
+#   before_script: #verificamos si esta levantado el docker compose y si es asi lo detenemos
+#     - docker-compose -f docker-compose.yml down
+
+#   script: # ejecutamos el comando para desplegar el microservicio con docker compose
+#     - docker-compose -f docker-compose.yml up -d
+#     - echo "------------------DEPLOY DEL MICROSERVICIO DE USUARIO------------------"
+  
+#   needs:
+#     - delivery_usuario # necesitamos que se haya subido la imagen a dockerhub
+#   allow_failure: false
+
+
+
+
+
+
+
+
+

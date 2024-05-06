@@ -1,0 +1,43 @@
+.App {
+    font-family: sans-serif;
+    text-align: center;
+}
+
+.component {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    background-color: #1D5B79;
+    min-width: fit-content;
+    width: 50%;
+    max-width: 90%;
+    margin: 1em auto;
+    padding: 1em 0 2em 0;
+    border: 0.1px solid #EF6262;
+    border-radius: 10px;
+}
+
+.cont-components{
+text-align: center;
+}
+
+.subTitle {
+    margin-top: -1em;
+    color: #FF9900;
+}
+
+.tit{
+    margin: 5px;
+    font-size:x-large;
+    color: #FF9900;
+}
+
+h3{
+    color: white;
+}
+
+hr {
+    border: 1px solid #EF6262;
+    margin: 20px 0 20px;
+  }

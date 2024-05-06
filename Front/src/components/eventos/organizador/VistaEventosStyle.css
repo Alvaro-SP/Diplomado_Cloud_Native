@@ -1,0 +1,62 @@
+main {
+  background-color: #133e53;
+  min-height: 100vh;
+  width: 100%;
+  position: absolute;
+  overflow-y: scroll !important;
+}
+
+::-webkit-scrollbar {
+  -webkit-appearance: none;
+  background-color: #1d5b79;
+}
+
+::-webkit-scrollbar:vertical {
+  width: 7px;
+}
+
+::-webkit-scrollbar-button:increment {
+  display: none;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-track {
+  border-radius: 15px;
+}
+
+.fontPersonalizada {
+  font-family: "Signika", sans-serif;
+  cursor: default;
+}
+
+ul.pagination li {
+  margin: 10px;
+}
+
+.tarjetaMostrarEvento {
+  background-color: #f3aa60 !important;
+  border-radius: 15px !important;
+  height: 275px !important;
+}
+
+.tarjetaDesplegable {
+  background-color: #f7d060 !important;
+  border-radius: 15px !important;
+}
+
+.selectPersonalizado > input {
+  background-color: transparent;
+  color: white;
+}
+
+.selectPersonalizado ul {
+  background-color: #ef6262;
+}
+
+.selectPersonalizado ul li span {
+  color: white;
+}

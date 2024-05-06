@@ -1,0 +1,90 @@
+.centered-h3-registro{
+    text-align: center;
+    color: #F3AA60;
+    font-weight: bold;
+    margin: 0px;
+    border: 0px;
+
+}
+
+.input-field {
+   margin: auto;
+}
+
+.custom-card-action {
+    background-color: #1D5B79;
+    color: white;
+}
+
+
+/* Estilos para el modal personalizado */
+.custom-modal-login {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.custom-modal-login.open {
+    display: flex;
+}
+
+.custom-modal-login .modal-content-login {
+    background-color: #0b478c97;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(248, 14, 14, 0.556);
+    width: 300px;
+}
+
+.custom-modal-login h4 {
+    margin-top: 0;
+    font-size: 1.5rem;
+    color: #f4efef;
+}
+
+.custom-modal-login input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #fbf1f1;
+    color: #fff;
+    border-radius: 3px;
+}
+
+.custom-modal-login .modal-footer-login {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+.custom-modal-login button {
+    margin-left: 10px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.custom-modal-login button.waves-green {
+    background-color: #207924;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+.custom-modal-login button.waves-red {
+    background-color: #f44336;
+    color: #fff;
+}
+
+.custom-modal-login button:hover {
+    opacity: 0.8;
+}

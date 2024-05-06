@@ -1,0 +1,225 @@
+.event-modalVistaEvento-container {
+  background-attachment: fixed;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.open-modalVistaEvento-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+.modalVistaEvento {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.328);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalVistaEvento-blur-background {
+  position: absolute;
+  top: 10%;
+  left: 10%;
+  width: 80%;
+  height: 87%;
+  align-items: center;
+  background: #0063cdb0;
+  background-size: cover;
+  filter: blur(10px);
+  -webkit-filter: blur(15px);
+  z-index: -1; /* Put the background behind the content */
+}
+
+.modalVistaEvento-content {
+  /* Adjust the background color as needed */
+  color: white;
+  width: 78%;
+  top: -5%;
+  height: 85%;
+  padding: 20px;
+  background-color: rgba(5, 14, 47, 0.811);
+  border-radius: 10px;
+  box-shadow: 0 0 10px #ef6262;
+  position: relative; /* Ensure the content is on top of the blurred background */
+  z-index: 1;
+  overflow-y: auto;
+}
+.modalVistaEvento-content::-webkit-scrollbar {
+  width: 8px; /* Set the width of the scrollbar */
+}
+
+.modalVistaEvento-content::-webkit-scrollbar-thumb {
+  background-color: #f3aa60; /* Color of the thumb */
+  border-radius: 4px; /* Rounded corners for the thumb */
+}
+
+.modalVistaEvento-content::-webkit-scrollbar-track {
+  background-color: rgba(0, 0, 0, 0.1); /* Color of the track */
+}
+.event-cover {
+  width: 100%;
+  height: 40%;
+  background-color: #1d5b79; /* Agrega aquí la imagen de portada del evento */
+  box-shadow: 10px 0 10px rgba(0, 0, 0, 0.468);
+  background-size: cover;
+  background-position: center;
+  margin-bottom: 10px;
+  margin-left: 2%;
+  margin-top: 15%;
+}
+.event-cover img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 5%;
+  object-fit: cover;
+}
+.close-modalVistaEvento-button {
+  position: fixed;
+  top: 8%;
+  right: 12%;
+  background-color: #974946;
+  box-shadow: 0 0 10px rgba(19, 22, 107, 0.468);
+  color: white;
+  border: black;
+  padding: 10px 20px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+/* styles for tabs */
+/* Estilos personalizados para las pestañas */
+.mi-color {
+  background-color: #ff9900; /* Cambia este color al que desees */
+  color: #21395e; /* Cambia este color al que desees */
+}
+
+/* Estilos para la pestaña activa */
+.mi-color a.active {
+  background-color: #ffcc00; /* Cambia este color al que desees */
+  color: #000; /* Cambia este color al que desees */
+}
+
+/* EVENTO */
+.tituloverevento {
+  font-size: 30px;
+  font-weight: bold;
+  color: #ef6262;
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+/* ASIENTOS */
+/* Seat */
+.seat {
+  width: 50%;
+  height: 50%;
+  border: 1px solid gray;
+  background-color: #262b26c1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.selected {
+  background-color: #018b05c1;
+  color: white;
+}
+
+/* SeatingMatrix */
+.seating-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.seat-row {
+  display: flex;
+  gap: 0px;
+}
+
+.seating-disabled {
+  width: 50%;
+  height: 50%;
+  border: 1px solid gray;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #af0000;
+  color: #ffffff;
+  cursor: not-allowed;
+}
+
+/* TABLA DE ASIENTOS */
+
+/* SeatingTable.css */
+.seating-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #3c3c3c;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+.seating-table th,
+.seating-table td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: center;
+}
+
+.seating-table th {
+  background-color: #000000;
+  font-weight: bold;
+}
+
+.remove-button {
+  background-color: #f00;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.remove-button:hover {
+  background-color: #c00;
+}
+
+tfoot td {
+  font-weight: bold;
+}
+
+tfoot td[colspan="5"] {
+  text-align: right;
+}
+
+.datepicker-date-display,
+td.is-selected {
+  background-color: #64d484 !important;
+}
+
+td.is-today {
+  color: #025535 !important;
+}
+
+td.is-today.is-selected {
+  color: rgb(0, 0, 0) !important;
+}
+
+.datepicker-done,
+.datepicker-cancel {
+  color: #1d5b79 !important;
+}
+
+.datepicker-clear {
+  color: #d71313 !important;
+}

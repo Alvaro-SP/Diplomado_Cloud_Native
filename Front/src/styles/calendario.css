@@ -1,0 +1,69 @@
+
+.rbc-calendar {
+    background-color: #333;
+    color: #fff;
+}
+
+.rbc-event {
+    background-color: #FF9900;
+    color: #fff;
+}
+  
+.rbc-selected {
+    background-color: #444;
+    color: #fff;
+}
+
+.rbc-header {
+    background-color: #444;
+    color: #fff;
+}
+
+.rbc-toolbar .rbc-btn-group button {
+    color: #AED8CC;
+    background-color: #6C3428;
+}
+
+.rbc-today{
+    background-color: #313866;
+}
+
+.rbc-off-range-bg{
+    color: #FF9900;
+    background-color: #2D4356;
+}
+
+.rbc-off-range{
+    color: #FFF;
+}
+
+
+.btn-event{
+    width:100%;
+    height: 100%;
+    border: 0;
+    background-color: transparent;
+    text-align: left;
+}
+
+/* Cambiar el fondo del modal a un color oscuro */
+.swal2-popup {
+    background-color: #333; /* Color oscuro de fondo */
+  }
+  
+  /* Cambiar el color del texto en el modo oscuro */
+  .swal2-title, .swal2-content {
+    color: #fff; /* Color de texto en modo oscuro */
+  }
+  
+  /* Cambiar el color del botón de confirmación en el modo oscuro */
+  .swal2-confirm {
+    background-color: #007bff; /* Color de fondo del botón */
+    color: #fff; /* Color de texto del botón */
+  }
+  
+  /* Cambiar el color del botón de cancelación en el modo oscuro */
+  .swal2-cancel {
+    background-color: #6c757d; /* Color de fondo del botón */
+    color: #fff; /* Color de texto del botón */
+  }

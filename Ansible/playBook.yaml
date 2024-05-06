@@ -1,0 +1,214 @@
+---
+- name: Actualizar código, y levantar aplicación
+  hosts: produccion
+  tasks:
+    - name: Actualizar el repositorio de Git
+      become: yes
+      become_user: ansible
+      git:
+        repo: git@github.com:Alvaro-SP/Diplomado_Cloud_Native.git
+        dest: Diplomado_Cloud_Native
+        version: main
+
+    - name: Construir imagen de Docker
+      become: yes
+      become_user: ansible
+      command: sudo docker build -t alvarosp24/sa_frontend . --no-cache --force-rm
+      args:
+        chdir: Diplomado_Cloud_Native/Front
+
+    - name: Detener contenedores
+      become: yes
+      become_user: ansible
+      command: docker stop $(docker ps -a -q) || true
+      args:
+        chdir: Diplomado_Cloud_Native
+    
+    - name: Correr contenedor
+      become: yes
+      become_user: ansible
+      command: sudo docker run -p 80:5173 alvarosp24/sa_frontend
+      args:
+        chdir: Diplomado_Cloud_Native
+
+    # - name: Borrar todas las imagenes
+    #   become: yes
+    #   become_user: ansible
+    #   shell: |
+    #     docker images -q | xargs -r docker rmi -f
+    #   args:
+    #     chdir: diplomado
+
+    # - name: Guardar variables de entorno en hechos de Ansible
+    #   become: yes
+    #   become_user: ansible
+    #   ansible.builtin.set_fact:
+    #     VITE_REACT_APP_API_URL: "{{ lookup('env', 'VITE_REACT_APP_API_URL') }}"
+    #     DB_HOST: "{{ lookup('env', 'DB_HOST') }}"
+    #     DB_USER: "{{ lookup('env', 'DB_USER') }}"
+    #     DB_PASS: "{{ lookup('env', 'DB_PASS') }}"
+    #     DB_NAME: "{{ lookup('env', 'DB_NAME') }}"
+    #     DB_PORT: "{{ lookup('env', 'DB_PORT') }}"
+    #     CRYPTO_KEY_FRONTEND: "{{ lookup('env', 'CRYPTO_KEY_FRONTEND') }}"
+    #     CRYPTO_ALGORITHM: "{{ lookup('env', 'CRYPTO_ALGORITHM') }}"
+    #     CRYPTO_KEY: "{{ lookup('env', 'CRYPTO_KEY') }}"
+    #     CRYPTO_IV: "{{ lookup('env', 'CRYPTO_IV') }}"
+    #     JWT_SECRET: "{{ lookup('env', 'JWT_SECRET') }}"
+    #     MAIL_USER: "{{ lookup('env', 'MAIL_USER') }}"
+    #     MAIL_PASS: "{{ lookup('env', 'MAIL_PASS') }}"
+    #     SECRET: "{{ lookup('env', 'SECRET') }}"
+    #     BUCKET_ACCESS: "{{ lookup('env', 'BUCKET_ACCESS') }}"
+    #     BUCKET_REGION: "{{ lookup('env', 'BUCKET_REGION') }}"
+    #     BUCKET_SECRET: "{{ lookup('env', 'BUCKET_SECRET') }}"
+    #     BUCKET_LINK: "{{ lookup('env', 'BUCKET_LINK') }}"
+    #     MICROSERVICE_USUARIOS1: "{{ lookup('env', 'MICROSERVICE_USUARIOS1') }}"
+    #     MICROSERVICE_EVENTOS1: "{{ lookup('env', 'MICROSERVICE_EVENTOS1') }}"
+    #     MICROSERVICE_COMPRA1: "{{ lookup('env', 'MICROSERVICE_COMPRA1') }}"
+    #     QUEUE_URL_RESPONSES: "{{ lookup('env', 'QUEUE_URL_RESPONSES') }}"
+    #     QUEUE_URL_PETICIONES: "{{ lookup('env', 'QUEUE_URL_PETICIONES') }}"
+    #     AWS_ACCESS_KEY_ID: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    #     AWS_SECRET_ACCESS_KEY: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+    #     AWS_REGION: "{{ lookup('env', 'AWS_REGION') }}"
+
+    #   delegate_to: localhost
+
+    # - name: Crear archivo .env en la otra máquina virtual
+    #   become: yes
+    #   become_user: ansible
+    #   copy:
+    #     content: |
+    #       VITE_REACT_APP_API_URL= {{ VITE_REACT_APP_API_URL }}
+    #       DB_HOST= {{ DB_HOST }}
+    #       DB_USER= {{ DB_USER }}
+    #       DB_PASS= {{ DB_PASS }}
+    #       DB_NAME= {{ DB_NAME }}
+    #       DB_PORT= {{ DB_PORT }}
+    #       CRYPTO_KEY_FRONTEND= {{ CRYPTO_KEY_FRONTEND }}
+    #       CRYPTO_ALGORITHM= {{ CRYPTO_ALGORITHM }}
+    #       CRYPTO_KEY= {{ CRYPTO_KEY }}
+    #       CRYPTO_IV= {{ CRYPTO_IV }}
+    #       JWT_SECRET= {{ JWT_SECRET }}
+    #       MAIL_USER= {{ MAIL_USER }}
+    #       MAIL_PASS= {{ MAIL_PASS }}
+    #       SECRET= {{ SECRET }}
+    #       BUCKET_ACCESS= {{ BUCKET_ACCESS }}
+    #       BUCKET_REGION= {{ BUCKET_REGION }}
+    #       BUCKET_SECRET= {{ BUCKET_SECRET }}
+    #       BUCKET_LINK= {{ BUCKET_LINK }}
+    #       MICROSERVICE_USUARIOS= {{ MICROSERVICE_USUARIOS1 }}
+    #       MICROSERVICE_EVENTOS= {{ MICROSERVICE_EVENTOS1 }}
+    #       MICROSERVICE_COMPRA= {{ MICROSERVICE_COMPRA1 }}
+    #       QUEUE_URL_RESPONSES= {{ QUEUE_URL_RESPONSES }}
+    #       QUEUE_URL_PETICIONES= {{ QUEUE_URL_PETICIONES }}
+    #       AWS_ACCESS_KEY_ID= {{ AWS_ACCESS_KEY_ID }}
+    #       AWS_SECRET_ACCESS_KEY= {{ AWS_SECRET_ACCESS_KEY }}
+    #       AWS_REGION= {{ AWS_REGION }}
+    #       VITE_REACT_APP_CRYPTO_KEY_FRONTEND= {{ VITE_REACT_APP_CRYPTO_KEY_FRONTEND }}
+    #     dest: g1_sa_proyecto/Front/.env
+
+    # - name: Reiniciar contenedores con build
+    #   become: yes
+    #   become_user: ansible
+    #   command: docker-compose up --build -d
+    #   args:
+    #     chdir: g1_sa_proyecto
+
+# - name: Actualizar código, detener y reiniciar contenedores de la segunda aplicación
+#   hosts: produccion2
+#   tasks:
+#     - name: Actualizar el repositorio de Git
+#       become: yes
+#       become_user: ansible
+#       git:
+#         repo: git@gitlab.com:Alvaro-SP/g1_sa_proyecto.git
+#         dest: g1_sa_proyecto
+#         version: main
+
+#     - name: Detener contenedores
+#       become: yes
+#       become_user: ansible
+#       command: docker-compose down --volumes --remove-orphans
+#       args:
+#         chdir: g1_sa_proyecto
+
+#     - name: Borrar todas las imagenes
+#       become: yes
+#       become_user: ansible
+#       shell: |
+#         docker images -q | xargs -r docker rmi -f
+#       args:
+#         chdir: g1_sa_proyecto
+
+#     - name: Guardar variables de entorno en hechos de Ansible
+#       become: yes
+#       become_user: ansible
+#       ansible.builtin.set_fact:
+#         VITE_REACT_APP_API_URL: "{{ lookup('env', 'VITE_REACT_APP_API_URL') }}"
+#         DB_HOST: "{{ lookup('env', 'DB_HOST') }}"
+#         DB_USER: "{{ lookup('env', 'DB_USER') }}"
+#         DB_PASS: "{{ lookup('env', 'DB_PASS') }}"
+#         DB_NAME: "{{ lookup('env', 'DB_NAME') }}"
+#         DB_PORT: "{{ lookup('env', 'DB_PORT') }}"
+#         CRYPTO_KEY_FRONTEND: "{{ lookup('env', 'CRYPTO_KEY_FRONTEND') }}"
+#         CRYPTO_ALGORITHM: "{{ lookup('env', 'CRYPTO_ALGORITHM') }}"
+#         CRYPTO_KEY: "{{ lookup('env', 'CRYPTO_KEY') }}"
+#         CRYPTO_IV: "{{ lookup('env', 'CRYPTO_IV') }}"
+#         JWT_SECRET: "{{ lookup('env', 'JWT_SECRET') }}"
+#         MAIL_USER: "{{ lookup('env', 'MAIL_USER') }}"
+#         MAIL_PASS: "{{ lookup('env', 'MAIL_PASS') }}"
+#         SECRET: "{{ lookup('env', 'SECRET') }}"
+#         BUCKET_ACCESS: "{{ lookup('env', 'BUCKET_ACCESS') }}"
+#         BUCKET_REGION: "{{ lookup('env', 'BUCKET_REGION') }}"
+#         BUCKET_SECRET: "{{ lookup('env', 'BUCKET_SECRET') }}"
+#         BUCKET_LINK: "{{ lookup('env', 'BUCKET_LINK') }}"
+#         MICROSERVICE_USUARIOS2: "{{ lookup('env', 'MICROSERVICE_USUARIOS2') }}"
+#         MICROSERVICE_EVENTOS2: "{{ lookup('env', 'MICROSERVICE_EVENTOS2') }}"
+#         MICROSERVICE_COMPRA2: "{{ lookup('env', 'MICROSERVICE_COMPRA2') }}"
+#         QUEUE_URL_RESPONSES: "{{ lookup('env', 'QUEUE_URL_RESPONSES') }}"
+#         QUEUE_URL_PETICIONES: "{{ lookup('env', 'QUEUE_URL_PETICIONES') }}"
+#         AWS_ACCESS_KEY_ID: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+#         AWS_SECRET_ACCESS_KEY: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+#         AWS_REGION: "{{ lookup('env', 'AWS_REGION') }}"
+
+#       delegate_to: localhost
+
+#     - name: Crear archivo .env en la otra máquina virtual
+#       become: yes
+#       become_user: ansible
+#       copy:
+#         content: |
+#           VITE_REACT_APP_API_URL= {{ VITE_REACT_APP_API_URL }}
+#           DB_HOST= {{ DB_HOST }}
+#           DB_USER= {{ DB_USER }}
+#           DB_PASS= {{ DB_PASS }}
+#           DB_NAME= {{ DB_NAME }}
+#           DB_PORT= {{ DB_PORT }}
+#           CRYPTO_KEY_FRONTEND= {{ CRYPTO_KEY_FRONTEND }}
+#           CRYPTO_ALGORITHM= {{ CRYPTO_ALGORITHM }}
+#           CRYPTO_KEY= {{ CRYPTO_KEY }}
+#           CRYPTO_IV= {{ CRYPTO_IV }}
+#           JWT_SECRET= {{ JWT_SECRET }}
+#           MAIL_USER= {{ MAIL_USER }}
+#           MAIL_PASS= {{ MAIL_PASS }}
+#           SECRET= {{ SECRET }}
+#           BUCKET_ACCESS= {{ BUCKET_ACCESS }}
+#           BUCKET_REGION= {{ BUCKET_REGION }}
+#           BUCKET_SECRET= {{ BUCKET_SECRET }}
+#           BUCKET_LINK= {{ BUCKET_LINK }}
+#           MICROSERVICE_USUARIOS= {{ MICROSERVICE_USUARIOS2 }}
+#           MICROSERVICE_EVENTOS= {{ MICROSERVICE_EVENTOS2 }}
+#           MICROSERVICE_COMPRA= {{ MICROSERVICE_COMPRA2 }}
+#           QUEUE_URL_RESPONSES= {{ QUEUE_URL_RESPONSES }}
+#           QUEUE_URL_PETICIONES= {{ QUEUE_URL_PETICIONES }}
+#           AWS_ACCESS_KEY_ID= {{ AWS_ACCESS_KEY_ID }}
+#           AWS_SECRET_ACCESS_KEY= {{ AWS_SECRET_ACCESS_KEY }}
+#           AWS_REGION= {{ AWS_REGION }}
+#           VITE_REACT_APP_CRYPTO_KEY_FRONTEND= {{ VITE_REACT_APP_CRYPTO_KEY_FRONTEND }}
+#         dest: g1_sa_proyecto/Front/.env
+
+    # - name: Reiniciar contenedores con build
+    #   become: yes
+    #   become_user: ansible
+    #   command: docker-compose up -d
+    #   args:
+    #     chdir: g1_sa_proyecto

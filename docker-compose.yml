@@ -1,0 +1,75 @@
+version: "3.3"
+services:
+  microservicio_compras:
+    container_name: microservicio_compras
+    restart: always
+    # build: ./Backend/Compras
+    image: alvarosp24/sa_compras:latest
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./Front/.env
+    networks:
+      - appticketzone
+  microservicio_usuario:
+    container_name: microservicio_usuario
+    restart: always
+    # build: ./Backend/AuthenticationServices
+    image: alvarosp24/sa_usuario:latest
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./Front/.env
+    networks:
+      - appticketzone
+  microservicio_eventos:
+    container_name: microservicio_eventos
+    restart: always
+    # build: ./Backend/Eventos
+    image: alvarosp24/sa_eventos:latest
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./Front/.env
+    networks:
+      - appticketzone
+
+  loosely:
+    container_name: loosely
+    restart: always
+    # build: ./Backend/Loosely
+    image: alvarosp24/sa_loosely:latest
+    ports:
+      - "3010:3010"
+    env_file:
+      - ./Front/.env
+    depends_on:
+      - microservicio_usuario
+      - microservicio_compras
+      - microservicio_eventos
+    networks:
+      - appticketzone
+  frontend:
+    container_name: frontend
+    restart: always
+    # build: ./Front
+    image: alvarosp24/sa_frontend:latest
+    ports:
+      - "3000:5173"
+    env_file:
+      - ./Front/.env
+    depends_on:
+      - loosely
+    links:
+      - loosely
+    networks:
+      - appticketzone
+networks:
+  appticketzone:
+    driver: "bridge"
+# sudo docker-compose build --no-cache
+# sudo docker-compose up -d --build
+# sudo docker-compose up -d
+# sudo docker-compose down
+# sudo docker-compose logs -f
+# sudo docker-compose logs -f --tail 100

@@ -1,0 +1,6 @@
+body {
+    background-image: url('../images/fondoticket.png'); 
+    background-size:auto; 
+    background-repeat: repeat; 
+    background-attachment: fixed; 
+}

@@ -1,0 +1,18 @@
+.centered-h3-registro{
+    text-align: center;
+    color: #F3AA60;
+    font-weight: bold;
+    margin: 0px;
+    border: 0px;
+
+}
+
+.input-field {
+   margin: auto;
+}
+
+.custom-card-action {
+    background-color: #1D5B79;
+    color: white;
+}
+
