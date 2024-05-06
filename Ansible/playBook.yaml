@@ -13,7 +13,7 @@
     - name: Construir imagen de Docker
       become: yes
       become_user: ansible
-      command: echo '1234' | sudo -S  docker build -t alvarosp24/sa_frontend . --no-cache --force-rm
+      command: docker build -t alvarosp24/sa_frontend . --no-cache --force-rm
       args:
         chdir: Diplomado_Cloud_Native/Front
 
@@ -27,7 +27,7 @@
     - name: Correr contenedor
       become: yes
       become_user: ansible
-      command: echo '1234' | sudo -S  docker run -p 80:5173 alvarosp24/sa_frontend
+      command: docker run -p 80:5173 alvarosp24/sa_frontend
       args:
         chdir: Diplomado_Cloud_Native
 
