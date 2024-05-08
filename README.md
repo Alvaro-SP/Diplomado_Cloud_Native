@@ -101,3 +101,7 @@ ping prod
 
 
 ## Configuración de ANSIBLE
+creamos el playbook y con el comando siguiente lo hacemos correr
+```bash
+ansible-playbook playBook.yaml
+```
