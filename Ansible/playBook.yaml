@@ -24,12 +24,12 @@
     #   args:
     #     chdir: Diplomado_Cloud_Native
     
-    # - name: Correr contenedor
-    #   become: yes
-    #   become_user: ansible
-    #   command: echo "LEVANTANDO AMBIENTE DE PRODUCCION"
-    #   args:
-    #     chdir: Diplomado_Cloud_Native
+    - name: Correr contenedor
+      become: yes
+      become_user: ansible
+      command: docker run -p 5173:5173 alvarosp24/sa_frontend
+      args:
+        chdir: Diplomado_Cloud_Native
 
     # - name: Borrar todas las imagenes
     #   become: yes
